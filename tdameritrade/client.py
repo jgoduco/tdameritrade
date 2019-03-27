@@ -59,7 +59,10 @@ class TDClient(object):
     def instrumentDF(self, cusip):
         return pd.DataFrame(self.instrument(cusip))
 
+	 ## symbol can be a string | or string[]
+	 ## eg. 'aapl' | ['appl', 'csco', 'msft']
     def quote(self, symbol):
+        if type(symbol) == list: symbol = ','.join(symbol)
         return requests.get(QUOTES,
                             headers=self._headers(),
                             params={'symbol': symbol.upper()}).json()
