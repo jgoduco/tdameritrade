@@ -2,6 +2,14 @@ import os
 import requests
 import pandas as pd
 from .urls import ACCOUNTS, INSTRUMENTS, QUOTES, SEARCH, HISTORY, OPTIONCHAIN
+from enum import Flag, auto
+
+
+class AccountInfo(Flag):
+    BALANCES = auto()
+    POSITIONS = auto()
+    ORDERS = auto()
+    ALL = BALANCES | POSITIONS | ORDERS
 
 
 class TDClient(object):
@@ -12,17 +20,24 @@ class TDClient(object):
     def _headers(self):
         return {'Authorization': 'Bearer ' + self._token}
 
-    def accounts(self):
+    # for backwards compatibility, the default query param is BALANCES only
+    def accounts(self, user_params=AccountInfo.BALANCES):
+        fields = []
+        if user_params & AccountInfo.POSITIONS:
+            fields.append('positions')
+        if user_params & AccountInfo.ORDERS:
+            fields.append('orders')
+
         ret = {}
         if self.accountIds:
             for acc in self.accountIds:
-                resp = requests.get(ACCOUNTS + str(acc), headers=self._headers())
+                resp = requests.get(ACCOUNTS + str(acc), headers=self._headers(), params={'fields': ','.join(fields)})
                 if resp.status_code == 200:
                     ret[acc] = resp.json()
                 else:
                     raise Exception(resp.text)
         else:
-            resp = requests.get(ACCOUNTS, headers=self._headers())
+            resp = requests.get(ACCOUNTS, headers=self._headers(), params={'fields': ','.join(fields)})
             if resp.status_code == 200:
                 for account in resp.json():
                     ret[account['securitiesAccount']['accountId']] = account
@@ -30,8 +45,8 @@ class TDClient(object):
                 raise Exception(resp.text)
         return ret
 
-    def accountsDF(self):
-        return pd.io.json.json_normalize(self.accounts())
+    def accountsDF(self, user_params=AccountInfo.BALANCES):
+        return pd.io.json.json_normalize(self.accounts(user_params))
 
     def search(self, symbol, projection='symbol-search'):
         return requests.get(SEARCH,
@@ -59,10 +74,11 @@ class TDClient(object):
     def instrumentDF(self, cusip):
         return pd.DataFrame(self.instrument(cusip))
 
-	 ## symbol can be a string | or string[]
-	 ## eg. 'aapl' | ['appl', 'csco', 'msft']
+    # symbol can be a string | or string[]
+    # eg. 'aapl' | ['appl', 'csco', 'msft']
     def quote(self, symbol):
-        if type(symbol) == list: symbol = ','.join(symbol)
+        if type(symbol) == list:
+            symbol = ','.join(symbol)
         return requests.get(QUOTES,
                             headers=self._headers(),
                             params={'symbol': symbol.upper()}).json()
