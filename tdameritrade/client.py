@@ -1,8 +1,8 @@
 import os
+from enum import Flag, auto
 import requests
 import pandas as pd
 from .urls import ACCOUNTS, INSTRUMENTS, QUOTES, SEARCH, HISTORY, OPTIONCHAIN
-from enum import Flag, auto
 
 
 class AccountInfo(Flag):
@@ -29,15 +29,16 @@ class TDClient(object):
             fields.append('orders')
 
         ret = {}
+        paramsDict = {'fields': ','.join(fields)}
         if self.accountIds:
             for acc in self.accountIds:
-                resp = requests.get(ACCOUNTS + str(acc), headers=self._headers(), params={'fields': ','.join(fields)})
+                resp = requests.get(ACCOUNTS + str(acc), headers=self._headers(), params=paramsDict)
                 if resp.status_code == 200:
                     ret[acc] = resp.json()
                 else:
                     raise Exception(resp.text)
         else:
-            resp = requests.get(ACCOUNTS, headers=self._headers(), params={'fields': ','.join(fields)})
+            resp = requests.get(ACCOUNTS, headers=self._headers(), params=paramsDict)
             if resp.status_code == 200:
                 for account in resp.json():
                     ret[account['securitiesAccount']['accountId']] = account
@@ -77,7 +78,7 @@ class TDClient(object):
     # symbol can be a string | or string[]
     # eg. 'aapl' | ['appl', 'csco', 'msft']
     def quote(self, symbol):
-        if type(symbol) == list:
+        if isinstance(symbol, (list,)):
             symbol = ','.join(symbol)
         return requests.get(QUOTES,
                             headers=self._headers(),
