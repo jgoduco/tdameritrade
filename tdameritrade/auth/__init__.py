@@ -1,16 +1,18 @@
 import os
 import os.path
 import sys
-import requests
 import time
-from selenium import webdriver
 from shutil import which
 import urllib.parse as up
+import requests
+from selenium import webdriver
 
 
 def authentication(client_id, redirect_uri):
     client_id = client_id + '@AMER.OAUTHAP'
-    url = 'https://auth.tdameritrade.com/auth?response_type=code&redirect_uri=' + up.quote(redirect_uri) + '&client_id=' + up.quote(client_id)
+    url = 'https://auth.tdameritrade.com/auth?response_type=code'
+    url += '&redirect_uri=' + up.quote(redirect_uri)
+    url += '&client_id=' + up.quote(client_id)
 
     options = webdriver.ChromeOptions()
 
@@ -74,11 +76,11 @@ def authentication(client_id, redirect_uri):
     return resp.json()
 
 
-def refresh_token(refresh_token, client_id):
+def refresh_token(refresh_tkn, client_id):
     resp = requests.post('https://api.tdameritrade.com/v1/oauth2/token',
                          headers={'Content-Type': 'application/x-www-form-urlencoded'},
                          data={'grant_type': 'refresh_token',
-                               'refresh_token': refresh_token,
+                               'refresh_token': refresh_tkn,
                                'client_id': client_id})
     if resp.status_code != 200:
         raise Exception('Could not authenticate!')
