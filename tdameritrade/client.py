@@ -98,14 +98,19 @@ class TDClient(object):
         df['datetime'] = pd.to_datetime(df['datetime'], unit='ms')
         return df
 
-    def options(self, symbol):
+    # allow client to call with additional params
+    # eg. {'range': 'NTM'} for only near-the-money options
+    def options(self, symbol, params=None):
+        request_params = {'symbol': symbol.upper()}
+        if params is not None:
+            request_params.update(params)
         return requests.get(OPTIONCHAIN,
                             headers=self._headers(),
-                            params={'symbol': symbol.upper()}).json()
+                            params=request_params).json()
 
-    def optionsDF(self, symbol):
+    def optionsDF(self, symbol, params=None):
         ret = []
-        dat = self.options(symbol)
+        dat = self.options(symbol, params)
         for date in dat['callExpDateMap']:
             for strike in dat['callExpDateMap'][date]:
                 ret.extend(dat['callExpDateMap'][date][strike])
